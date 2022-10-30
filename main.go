@@ -1,15 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
-	"io"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
-	"syscall"
-	"unsafe"
+	"sync"
 
 	"github.com/creack/pty"
 	"github.com/gorilla/mux"
@@ -24,9 +24,25 @@ type windowSize struct{
 	Y uint16
 }
 
+var WebsocketMessageType = map[int]string{
+	websocket.BinaryMessage: "binary",
+	websocket.TextMessage:   "text",
+	websocket.CloseMessage:  "close",
+	websocket.PingMessage:   "ping",
+	websocket.PongMessage:   "pong",
+}
+type TTYSize struct {
+	Cols uint16 `json:"cols"`
+	Rows uint16 `json:"rows"`
+	X    uint16 `json:"x"`
+	Y    uint16 `json:"y"`
+}
+
+
 var upgrader = websocket.Upgrader{
     ReadBufferSize:  1024,
     WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {return true},
 }
 func handleWebSocket(w http.ResponseWriter, r *http.Request){
 	l:=log.WithField("RemoteAddress", r.RemoteAddr)
@@ -51,6 +67,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request){
 		conn.Close()
 	}()
 
+	var waiter sync.WaitGroup
+	waiter.Add(1)
 	go func ()  {
 		for{
 			buf :=make([]byte,1024)
@@ -58,66 +76,59 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request){
 			if err!=nil{
 				conn.WriteMessage(websocket.TextMessage,[]byte(err.Error()))
 				l.WithError(err).Error(err.Error())
+				waiter.Done()
 				return
 			}
 			conn.WriteMessage(websocket.BinaryMessage,buf[:read])
-
 		}
 	}()
 
-	for{
-		messageType,reader,err :=conn.NextReader()
-		if err!=nil{
-			l.WithError(err).Error("Not able to read next line")
-			conn.WriteMessage(websocket.TextMessage,[]byte("Unable to read message typr from reader"))
-			return
-		}
-		if messageType == websocket.TextMessage{
-			l.Warn("Unexpected Message type")
-			conn.WriteMessage(websocket.TextMessage, []byte("Unexpected text message"))
-			continue
-		}
-		dataTypeBuf := make([]byte,1)
-		read,err :=reader.Read(dataTypeBuf)
-		if err!=nil{
-			l.WithError(err).Error("Unable to read message type from reader")
-			conn.WriteMessage(websocket.TextMessage, []byte("Unable to read message type from reader"))
-			return
-		}
-		if read != 1 {
-			l.WithField("bytes", read).Error("Unexpected number of bytes read")
-			return
-		}
-
-		switch dataTypeBuf[0]{
-			case 0 :
-				copied, err :=io.Copy(tty,reader)
-				if err!=nil {
-					l.WithError(err).Errorf("Error after copying %d bytes", copied)
-				}
-			case 1 :
-				decoder := json.NewDecoder(reader)
-				resizeMessage := windowSize{}
-				err := decoder.Decode(&resizeMessage)
-				if err != nil {
-					conn.WriteMessage(websocket.TextMessage, []byte("Error decoding resize message: "+err.Error()))
+	go func ()  {
+		for{
+			messageType, data, err :=conn.ReadMessage()
+			if(err!=nil){
+				l.WithError(err).Error("failed to get next reader")
+				return
+			}
+			dataLength :=len(data)
+			dataBuffer := bytes.Trim(data,"\x00")
+			dataType,ok := WebsocketMessageType[messageType]
+			if !ok {
+				dataType="unknwon"
+			}
+			l.Info("Type of message is %s",dataType)
+			if dataLength ==-1 {
+				l.Warn("Failed to get correct number of bytes read")
+				continue
+			}
+			if messageType == websocket.BinaryMessage {
+				if dataBuffer[0]==1{
+					ttySize :=&TTYSize{}
+					resizeMessage := bytes.Trim(dataBuffer[1:], " \n\r\t\x00\x01")
+					if err := json.Unmarshal(resizeMessage, ttySize); err != nil {
+						l.Warnf("failed to unmarshal received resize message '%s': %s", string(resizeMessage), err)
+						continue
+					}
+					l.Info("resizing tty to use %v rows and %v columns...", ttySize.Rows, ttySize.Cols)
+					if err := pty.Setsize(tty, &pty.Winsize{
+						Rows: ttySize.Rows,
+						Cols: ttySize.Cols,
+					}); err != nil {
+						l.Warnf("failed to resize tty, error: %s", err)
+					}
 					continue
 				}
-				log.WithField("resizeMessage", resizeMessage).Info("Resizing terminal")
-				_, _, errno := syscall.Syscall(
-					syscall.SYS_IOCTL,
-					tty.Fd(),
-					syscall.TIOCSWINSZ,
-					uintptr(unsafe.Pointer(&resizeMessage)),
-				)
-				if errno != 0 {
-					l.WithError(syscall.Errno(errno)).Error("Unable to resize terminal")
-				}
-			default:
-				l.WithField("dataType", dataTypeBuf[0]).Error("Unknown data type")
+			}
+			bytesWritten, err := tty.Write(dataBuffer)
+			l.Info("bytes written ",bytesWritten)
+			if err != nil {
+				l.Warn(fmt.Sprintf("failed to write %v bytes to tty: %s", len(dataBuffer), err))
+				continue
+			}
+			l.Tracef("%v bytes written to tty...", bytesWritten)
 		}
-	}
-
+	}()
+	waiter.Wait()
  }
 
 
