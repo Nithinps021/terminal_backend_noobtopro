@@ -12,7 +12,7 @@ COPY go.mod ./
 RUN go mod download
 
 #copying other go files
-COPY *.go ./
+COPY ./ ./
 
 #compile application
 RUN go build -o /terminal-backend
