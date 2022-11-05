@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"sync"
 
 	"github.com/creack/pty"
@@ -133,10 +132,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request){
 
 
 func main(){ 
-	var listen = flag.String("listen", "127.0.0.1:8080", "Host:port to listen on")
+	
 	var assetsPath = flag.String("assets", "./assets", "Path to assets")
 
 	flag.Parse()
+	port := os.Getenv("PORT")
+	if port == "" {
+        port = "8080"
+   	}
+	 
 
 	r := mux.NewRouter()
 
@@ -145,11 +149,7 @@ func main(){
 
 	log.Info("Demo Websocket/Xterm terminal")
 
-	if !(strings.HasPrefix(*listen, "127.0.0.1") || strings.HasPrefix(*listen, "localhost")) {
-		log.Warn("Danger Will Robinson - This program has no security built in and should not be exposed beyond localhost, you've been warned")
-	}
-
-	if err := http.ListenAndServe(*listen, r); err != nil {
+	if err := http.ListenAndServe(":"+port, r); err != nil {
 		log.WithError(err).Fatal("Something went wrong with the webserver")
 	}
 	 
