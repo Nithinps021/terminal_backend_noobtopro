@@ -53,6 +53,7 @@ env:
   GAR_LOCATION: asia-south1 # TODO: update Artifact Registry location
   SERVICE: terminal-backend-noobtopro # TODO: update Cloud Run service name
   REGION: asia-south1 # TODO: update Cloud Run service region
+  IMAGE_NAME: terminal-image
 
 jobs:
   deploy:
@@ -86,8 +87,8 @@ jobs:
 
       - name: Build and Push Container
         run: |-
-          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}" ./
-          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}"
+          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{env.IMAGE_NAME}}:${{ github.sha }}" ./
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{env.IMAGE_NAME}}:${{ github.sha }}"
 
       # END - Docker auth and build of image
 
