@@ -24,9 +24,6 @@ WORKDIR /
 #Copying binary file from the build image
 COPY --from=build /terminal-backend /terminal-backend
 
-#Opening port 8080
-EXPOSE 8080
-
 ENTRYPOINT [ "/terminal-backend" ]
 
 
