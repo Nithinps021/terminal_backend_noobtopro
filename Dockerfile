@@ -21,7 +21,7 @@ RUN go build -o /terminal-backend
 FROM scratch
 WORKDIR /
 
-#Copying binary file from the build
+#Copying binary file from the build image
 COPY --from=build /terminal-backend /terminal-backend
 
 #Opening port 8080
