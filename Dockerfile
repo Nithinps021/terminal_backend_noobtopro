@@ -22,9 +22,9 @@ FROM scratch
 WORKDIR /
 
 #Copying binary file from the build image
-COPY --from=build /terminal-backend /terminal-backend
+COPY --from=build ./terminal-backend ./terminal-backend
 EXPOSE 8080
-
+RUN ls
 ENTRYPOINT [ "/terminal-backend" ]
 
 
