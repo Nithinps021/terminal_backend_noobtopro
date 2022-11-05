@@ -140,8 +140,6 @@ func main(){
 	if port == "" {
         port = "8080"
    	}
-	 
-
 	r := mux.NewRouter()
 
 	r.HandleFunc("/term",handleWebSocket)
