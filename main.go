@@ -136,12 +136,13 @@ func main(){
 	var assetsPath = flag.String("assets", "./assets", "Path to assets")
 
 	flag.Parse()
+
 	port := os.Getenv("PORT")
 	if port == "" {
         port = "8080"
    	}
-	r := mux.NewRouter()
 
+	r := mux.NewRouter()
 	r.HandleFunc("/term",handleWebSocket)
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir(*assetsPath)))
 
