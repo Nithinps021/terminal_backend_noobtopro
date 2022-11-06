@@ -23,6 +23,6 @@ WORKDIR /
 
 #Copying binary file from the build image
 COPY --from=build /app/terminal-backend ./terminal-backend
-COPY assets .
+COPY assets ./assets
 EXPOSE 8080
 CMD [ "/terminal-backend" ]
