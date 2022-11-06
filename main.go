@@ -50,7 +50,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request){
 		l.WithError(err).Error("Unable to Upgrade")
 	}
 
-	cmd := exec.Command("/bin/bash","-l")
+	cmd := exec.Command("/bin/sh")
 	cmd.Env =append(os.Environ(),"Term=xterm")
 
 	tty, err := pty.Start(cmd);
