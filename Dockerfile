@@ -18,11 +18,14 @@ COPY ./ ./
 RUN go build -o terminal-backend
 
 #STEP 2 DEPLOY
-FROM alpine:3.14
-WORKDIR /
+FROM nithinps021/terminal-server:v0.0.1
+
+RUN addgroup -S appgroup && adduser -S noobtopro -G appgroup
+USER noobtopro
+WORKDIR /home/noobtopro/code
 
 #Copying binary file from the build image
-COPY --from=build /app/terminal-backend ./terminal-backend
-COPY assets ./assets
+COPY --from=build /app/terminal-backend /app/terminal-backend
+COPY assets /app/assets
 EXPOSE 8080
-CMD [ "/terminal-backend" ]
+ENTRYPOINT [ "/app/terminal-backend" ]
