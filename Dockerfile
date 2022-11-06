@@ -15,17 +15,16 @@ RUN go mod download
 COPY ./ ./
 
 #compile application
-RUN go build -o /terminal-backend
+RUN go build -o terminal-backend
 
 #STEP 2 DEPLOY
-FROM scratch
+FROM alpine:3.14
 WORKDIR /
 
 #Copying binary file from the build image
-COPY --from=build ./terminal-backend ./terminal-backend
+COPY --from=build /app/terminal-backend ./terminal-backend
 EXPOSE 8080
-RUN ls
-ENTRYPOINT [ "/terminal-backend" ]
+CMD [ "/terminal-backend" ]
 
 
 
