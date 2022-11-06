@@ -20,6 +20,7 @@ RUN go build -o terminal-backend
 #STEP 2 DEPLOY
 FROM nithinps021/terminal-server:v0.0.1
 
+# adding user 
 RUN addgroup -S appgroup && adduser -S noobtopro -G appgroup
 USER noobtopro
 WORKDIR /home/noobtopro/code
