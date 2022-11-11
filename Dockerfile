@@ -22,9 +22,10 @@ FROM nithinps021/terminal-server-allutil:v0.0.1
 
 # adding user 
 RUN addgroup -S appgroup && adduser -S noobtopro -G appgroup
-USER noobtopro
+USER root
 WORKDIR /home/noobtopro/code
-RUN chmod -R 777  /home/noobtopro/code
+RUN chmod -R 777 /home/noobtopro/code
+USER noobtopro
 
 #Copying binary file from the build image
 COPY --from=build /app/terminal-backend /app/terminal-backend
