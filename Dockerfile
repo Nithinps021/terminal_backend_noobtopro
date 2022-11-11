@@ -18,12 +18,13 @@ COPY ./ ./
 RUN go build -o terminal-backend
 
 #STEP 2 DEPLOY
-FROM nithinps021/terminal-server:v0.0.1
+FROM nithinps021/terminal-server-allutil:v0.0.1
 
 # adding user 
 RUN addgroup -S appgroup && adduser -S noobtopro -G appgroup
 USER noobtopro
 WORKDIR /home/noobtopro/code
+RUN chmod -R 777  /home/noobtopro/code
 
 #Copying binary file from the build image
 COPY --from=build /app/terminal-backend /app/terminal-backend
